@@ -54,6 +54,11 @@ def main() -> None:
     latest_true_loss = 0.0
     interval_expected = interval_received = 0
     last_feedback = time.monotonic()
+    # Timestamps are taken immediately as events happen but written to the CSVs
+    # once, on exit. Rewriting the CSV for every packet made the receiver fall
+    # behind on long runs, which inflated delays and produced false loss.
+    packet_updates: dict[int, dict] = {}
+    block_updates: dict[int, dict] = {}
 
     def finish(block: Block) -> None:
         missing_before = [i for i, packet in enumerate(block.data) if packet is None]
@@ -62,16 +67,9 @@ def main() -> None:
         for index, payload in recovered.items():
             block.data[index] = payload[: block.sizes[index]]
             seq = block.first_seq + index
-            store.update_rows(
-                "packets.csv", PACKET_FIELDS, lambda row, seq=seq: int(row["seq"]) == seq,
-                {"recover_time": f"{recover_time:.9f}"},
-            )
+            packet_updates.setdefault(seq, {})["recover_time"] = f"{recover_time:.9f}"
         complete = all(packet is not None for packet in block.data)
-        store.update_rows(
-            "blocks.csv", BLOCK_FIELDS,
-            lambda row, block_id=block.block_id: int(row["block_id"]) == block_id,
-            {"received_count": block.received, "recovered": int(complete)},
-        )
+        block_updates[block.block_id] = {"received_count": block.received, "recovered": int(complete)}
 
     print(f"receiver listening on UDP {config.RECEIVER_PORT}")
     try:
@@ -106,11 +104,7 @@ def main() -> None:
                         block.data[index] = payload
                         block.sizes[index] = int(header["payload_bytes"])
                         seq = int(header["seq"])
-                        store.update_rows(
-                            "packets.csv", PACKET_FIELDS,
-                            lambda row, seq=seq: int(row["seq"]) == seq,
-                            {"arrive_time": f"{now:.9f}"},
-                        )
+                        packet_updates.setdefault(seq, {})["arrive_time"] = f"{now:.9f}"
                 else:
                     block.sizes = list(map(int, header["sizes"]))
                     block.parity[int(header["parity_index"])] = payload
@@ -142,6 +136,8 @@ def main() -> None:
     finally:
         sock.close()
         feedback_sock.close()
+        store.update_keyed("packets.csv", PACKET_FIELDS, "seq", packet_updates)
+        store.update_keyed("blocks.csv", BLOCK_FIELDS, "block_id", block_updates)
     print("receiver stopped after idle timeout")
 
 

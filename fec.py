@@ -33,9 +33,16 @@ def gf_inv(a: int) -> int:
 
 
 def coefficients(parity_index: int, k: int) -> list[int]:
-    """Return a Vandermonde row for the requested parity packet."""
-    base = parity_index + 1
-    return [_EXP[(_LOG[base] * column) % 255] for column in range(k)]
+    """Return a Cauchy row for the requested parity packet.
+
+    Every square submatrix of a Cauchy matrix is invertible, so any m lost data
+    packets can be rebuilt from any m parity packets (an MDS code). A plain
+    Vandermonde row over GF(256) does not guarantee this: some 3- and 4-packet
+    loss patterns were unrecoverable even with enough parity (and crashed the
+    receiver). Needs k <= 16 and parity_index < 240 so x and y never collide.
+    """
+    x = 16 + parity_index
+    return [gf_inv(x ^ column) for column in range(k)]
 
 
 def encode(data_packets: list[bytes], r: int) -> list[bytes]:
