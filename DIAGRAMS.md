@@ -4,9 +4,9 @@
 
 ```mermaid
 flowchart LR
-  S[Sender + adaptive controller] -->|data + parity, UDP 5001| P[Seeded loss proxy]
-  P -->|surviving packets, UDP 5002| R[Receiver + FEC decoder]
-  R -->|loss feedback, UDP 5003| S
+  S[Sender + adaptive controller] -->|data + parity, UDP 15001| P[Seeded loss proxy]
+  P -->|surviving packets, UDP 15002| R[Receiver + FEC decoder]
+  R -->|loss feedback, UDP 15003| S
   S --- L[(Three CSV logs per run)]
   R --- L
 ```
@@ -46,9 +46,9 @@ downward hysteresis that prevents rapid state oscillation.
 
 ```mermaid
 flowchart LR
-  A[Sender] -->|destination 127.0.0.1:5001| B[Proxy]
-  B -->|destination 127.0.0.1:5002| C[Receiver]
-  C -->|destination 127.0.0.1:5003| A
+  A[Sender] -->|destination 127.0.0.1:15001| B[Proxy]
+  B -->|destination 127.0.0.1:15002| C[Receiver]
+  C -->|destination 127.0.0.1:15003| A
 ```
 
 **Figure 4.** Identifies the three localhost ports so a packet capture can
