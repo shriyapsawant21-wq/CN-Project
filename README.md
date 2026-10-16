@@ -24,15 +24,15 @@ and an analysis pipeline for the four required metrics and plots.
 ```text
 sender.py + controller.py
           |
-          | data and parity packets, UDP 5001
+          | data and parity packets, UDP 15001
           v
        proxy.py
           |
-          | surviving packets, UDP 5002
+          | surviving packets, UDP 15002
           v
       receiver.py
           |
-          | measured loss feedback, UDP 5003
+          | measured loss feedback, UDP 15003
           +---------------------------------> sender/controller
 ```
 
@@ -68,9 +68,9 @@ On Linux or macOS, activate with `source .venv/bin/activate`.
 | Downward hysteresis | 2 percentage points |
 | Feedback interval | 0.5 seconds |
 | Playout deadline | 250 milliseconds |
-| Sender to proxy | UDP 5001 |
-| Proxy to receiver | UDP 5002 |
-| Receiver to controller | UDP 5003 |
+| Sender to proxy | UDP 15001 |
+| Proxy to receiver | UDP 15002 |
+| Receiver to controller | UDP 15003 |
 
 Level 0 represents plain UDP and produces no parity packets. Change shared
 experiment constants in [config.py](config.py).

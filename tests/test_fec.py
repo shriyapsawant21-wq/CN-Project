@@ -27,6 +27,23 @@ class FecTests(unittest.TestCase):
         for index in (1, 5, 8):
             self.assertEqual(recovered[index], self.data[index])
 
+    def test_recovers_every_loss_pattern_up_to_r(self):
+        # Regression: a Vandermonde parity matrix left some 3- and 4-packet loss
+        # patterns undecodable even with enough parity.
+        import itertools
+
+        for r in (1, 2, 4):
+            parity = fec.encode(self.data, r)
+            for lost in range(1, r + 1):
+                for missing in itertools.combinations(range(10), lost):
+                    received = [None if i in missing else p for i, p in enumerate(self.data)]
+                    # The receiver uses whichever parity arrived: test the highest-index ones too.
+                    for arrived in (range(lost), range(r - lost, r)):
+                        recovered = fec.recover(received, {p: parity[p] for p in arrived})
+                        self.assertEqual(set(recovered), set(missing))
+                        for index in missing:
+                            self.assertEqual(recovered[index][: len(self.data[index])], self.data[index])
+
     def test_returns_empty_result_when_parity_is_insufficient(self):
         parity = fec.encode(self.data, 1)
         received = self.data.copy()

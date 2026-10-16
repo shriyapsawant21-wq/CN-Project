@@ -76,9 +76,31 @@ class CsvRunStore:
             return bool(self._read("packets.csv"))
 
     def append_rows(self, name: str, fields: list[str], new_rows: list[dict]) -> None:
+        # True append: cost depends only on the new rows, not on the file size.
+        # (Rewriting the whole file per call made a run O(n^2) and starved the
+        # receiver on long runs.)
+        with self._lock(name):
+            path = self.run_dir / name
+            is_new = not path.exists()
+            with path.open("a", newline="", encoding="utf-8") as handle:
+                writer = csv.DictWriter(handle, fieldnames=fields, extrasaction="ignore")
+                if is_new:
+                    writer.writeheader()
+                writer.writerows(new_rows)
+
+    def update_keyed(self, name: str, fields: list[str], key_field: str, updates: dict[int, dict]) -> None:
+        """Apply many row updates in a single read/rewrite pass.
+
+        Rows are matched on an integer column (e.g. ``seq`` or ``block_id``).
+        """
+        if not updates:
+            return
         with self._lock(name):
             rows = self._read(name)
-            rows.extend(new_rows)
+            for row in rows:
+                change = updates.get(int(row[key_field]))
+                if change:
+                    row.update(change)
             self._write(name, fields, rows)
 
     def update_rows(
